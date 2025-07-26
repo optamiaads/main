@@ -1,0 +1,131 @@
+﻿// VolumeColorVsSMA – v2.3 (simple constant gate)
+// Blue histogram bar when bar volume > VolSmaMult × 50‑SMA of volume (default 0.9).
+// Yellow line plots the 50‑SMA itself.
+
+
+#region Using declarations
+using System;
+using System.ComponentModel.DataAnnotations;
+using NinjaTrader.NinjaScript;
+using NinjaTrader.NinjaScript.Indicators;
+using NinjaTrader.Data;
+using System.Windows.Media;
+#endregion
+
+
+namespace NinjaTrader.NinjaScript.Indicators
+{
+    public class VolumeColorVsSMA : Indicator
+    {
+        private SMA volSma;
+
+
+        // ───── USER PARAMETER ─────
+        [NinjaScriptProperty, Range(0.1, 5)]
+        [Display(Name = "Vol SMA Mult", Order = 0, GroupName = "Parameters")]
+        public double VolSmaMult { get; set; } = 0.9;
+
+
+        protected override void OnStateChange()
+        {
+            if (State == State.SetDefaults)
+            {
+                Name        = "VolumeColorVsSMA";
+                Description = "Colours volume bars blue when barVol exceeds VolSmaMult × 50‑SMA (default 0.9); red otherwise. Yellow line = 50‑SMA.";
+                Calculate   = Calculate.OnBarClose;
+                IsOverlay   = false;
+
+
+                AddPlot(Brushes.Yellow, "VolumeSMA");   // idx 0 – SMA line
+                AddPlot(Brushes.Gray,   "VolumeBars");  // idx 1 – histogram
+                Plots[1].PlotStyle = PlotStyle.Bar;
+            }
+            else if (State == State.Configure)
+            {
+                volSma = SMA(Volume, 50);
+            }
+        }
+
+
+        protected override void OnBarUpdate()
+        {
+            if (CurrentBar < 50) return;
+
+
+            double smaVal = volSma[0];
+            double barVol = Volume[0];
+
+
+            Values[0][0] = smaVal;   // SMA plot
+            Values[1][0] = barVol;   // histogram bar
+
+
+            PlotBrushes[1][0] = barVol > smaVal * VolSmaMult ? Brushes.DodgerBlue : Brushes.Red;
+        }
+    }
+}
+
+
+#region NinjaScript generated code. Neither change nor remove.
+
+
+namespace NinjaTrader.NinjaScript.Indicators
+{
+        public partial class Indicator : NinjaTrader.Gui.NinjaScript.IndicatorRenderBase
+        {
+                private VolumeColorVsSMA[] cacheVolumeColorVsSMA;
+                public VolumeColorVsSMA VolumeColorVsSMA(double volSmaMult)
+                {
+                        return VolumeColorVsSMA(Input, volSmaMult);
+                }
+
+
+                public VolumeColorVsSMA VolumeColorVsSMA(ISeries<double> input, double volSmaMult)
+                {
+                        if (cacheVolumeColorVsSMA != null)
+                                for (int idx = 0; idx < cacheVolumeColorVsSMA.Length; idx++)
+                                        if (cacheVolumeColorVsSMA[idx] != null && cacheVolumeColorVsSMA[idx].VolSmaMult == volSmaMult && cacheVolumeColorVsSMA[idx].EqualsInput(input))
+                                                return cacheVolumeColorVsSMA[idx];
+                        return CacheIndicator<VolumeColorVsSMA>(new VolumeColorVsSMA(){ VolSmaMult = volSmaMult }, input, ref cacheVolumeColorVsSMA);
+                }
+        }
+}
+
+
+namespace NinjaTrader.NinjaScript.MarketAnalyzerColumns
+{
+        public partial class MarketAnalyzerColumn : MarketAnalyzerColumnBase
+        {
+                public Indicators.VolumeColorVsSMA VolumeColorVsSMA(double volSmaMult)
+                {
+                        return indicator.VolumeColorVsSMA(Input, volSmaMult);
+                }
+
+
+                public Indicators.VolumeColorVsSMA VolumeColorVsSMA(ISeries<double> input , double volSmaMult)
+                {
+                        return indicator.VolumeColorVsSMA(input, volSmaMult);
+                }
+        }
+}
+
+
+namespace NinjaTrader.NinjaScript.Strategies
+{
+        public partial class Strategy : NinjaTrader.Gui.NinjaScript.StrategyRenderBase
+        {
+                public Indicators.VolumeColorVsSMA VolumeColorVsSMA(double volSmaMult)
+                {
+                        return indicator.VolumeColorVsSMA(Input, volSmaMult);
+                }
+
+
+                public Indicators.VolumeColorVsSMA VolumeColorVsSMA(ISeries<double> input , double volSmaMult)
+                {
+                        return indicator.VolumeColorVsSMA(input, volSmaMult);
+                }
+        }
+}
+
+
+#endregion
