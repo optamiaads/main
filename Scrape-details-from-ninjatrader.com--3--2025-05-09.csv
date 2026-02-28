@@ -1,0 +1,1998 @@
+hover:font-semibold href,container
+https://developer.ninjatrader.com/docs/web/index,"GUIDES
+Introduction
+Simple Price Offset
+Parameterized Price Offset
+Exponential Moving Average
+Human Friendlier EMA
+Built-in Tools
+Double EMA
+Plotters
+Signaling Average True Range
+Fourier Moving Average
+Spectrogram
+Graphics
+Alligator
+ScaleBound Values
+Custom Drawing Tools
+Advanced Custom Drawing Tools
+REFERENCE
+Modules
+Introduction
+
+Welcome to the NinjaTrader Custom Indicators Tutorial Series. This collection of tutorials is designed to help you create powerful, custom indicators that can enhance your trading strategies on both the NinjaTrader Web and Mobile platforms using Javascript. Whether you're a seasoned developer or new to coding, these guides will provide you with the knowledge and tools to build indicators that fit your unique trading needs.
+
+WHY CREATE CUSTOM INDICATORS?
+
+Custom indicators allow you to:
+
+Personalize Your Trading Experience: Tailor indicators to match your specific trading strategies and market analysis techniques.
+Gain a Competitive Edge: Develop proprietary tools that aren't available to other traders.
+Enhance Analytical Capabilities: Combine different data sets and algorithms to uncover unique market insights.
+WHAT YOU'LL LEARN
+
+In this tutorial series, we'll cover:
+
+Getting Started: Setting up your development environment and understanding the basics of NinjaTrader's scripting capabilities.
+Building Your First Indicator: A step-by-step guide to creating a simple indicator from scratch.
+Advanced Techniques: Exploring complex functionalities like custom rendering, performance optimization, and cross-platform compatibility.
+Testing and Deployment: How to test your indicators effectively and deploy them on both Desktop and Web platforms.
+Best Practices: Tips and guidelines to ensure your indicators are robust, efficient, and maintainable.
+PREREQUISITES
+
+To make the most of these tutorials, you should have:
+
+Basic Programming Knowledge: Familiarity with JavaScript is recommended, as we'll be using it extensively.
+NinjaTrader Platform Access: Ensure you have access to the NinjaTrader Web platform.
+Development Tools: We'll guide you on the necessary tools and how to set them up for efficient development.
+
+If you are not familiur with Javscript basics, there is a lot of educational material in Internet - starting from W3 schools up to CodeAcademy and Udacity. Any community library will definitely have a couple of paper books too.
+
+Because there are so many high-quality materials about the language, we will not try to teach you how to program. Instead, we will focus on how to plug your algorithms to NinjaTrader.
+
+SUPPORT AND RESOURCES
+
+We're committed to your success. If you need assistance:
+
+Community Forums: Join our Community Forum to connect with other developers, ask questions, and share insights.
+Support Team: Reach out to our support team for personalized help.
+
+Ready to elevate your trading tools? Dive into the first tutorial and start building your custom indicators today!
+
+NEXT STEPS
+Begin with Tutorial 1: Simple Price Offset Indicator
+Happy coding!
+ON THIS PAGE
+Why Create Custom Indicators
+What You'll Learn
+Prerequisites
+Support and Resources
+Next Steps"
+https://developer.ninjatrader.com/docs/web/SimplePriceOffset,"GUIDES
+Introduction
+Simple Price Offset
+Parameterized Price Offset
+Exponential Moving Average
+Human Friendlier EMA
+Built-in Tools
+Double EMA
+Plotters
+Signaling Average True Range
+Fourier Moving Average
+Spectrogram
+Graphics
+Alligator
+ScaleBound Values
+Custom Drawing Tools
+Advanced Custom Drawing Tools
+REFERENCE
+Modules
+Simple Price Offset
+INDICATOR TUTORIAL 1
+
+Imagine that we need an indicator that will show a line with some offset from input series data. Something like Offset Indicator = Input Value - 2.0. It could be used as a stop loss line with our magic number.
+
+Our indicator's file is a Javascript's CommonJS module. The module exports a definition of the indicator for Tradovate Trader: how to uniquely identify our indicator in the library of indicators, how to calculate values, how to plot them, default colors, and styles. The application expects that the definition implements Indicator interface.
+
+Our first module will look like the next code:
+
+class offset {
+   map(d) {
+       return d.value() - 2.0;
+   }
+}
+ 
+module.exports = {
+   name: ""exampleOffset"",
+   calculator: offset
+};
+
+
+The export here will tell the app to add an indicator with the unique name exampleOffset and calculations for this indicator are coded in class offset. The application expects the class implements Calculator interface.
+
+The name field plays the role of a machine-readable identifier. We don't expect it to be some nice looking text.
+
+To be a calculator, the class should implement at least one function: Calculator.map. The function maps or translates an input value to output one, that's it. The input value is an object that points to just one item in input series and the app iterates through the whole series one by one in some sort of a loop. Here is a pseudo-code that can give some clues what is going on under the hood:
+
+ const inputSeries = [
+     { date: Date.parse('2018-06-05'), value: () => 2770.25 },
+     { date: Date.parse('2018-06-06'), value: () => 2770.50 },
+     ...];
+ 
+ const outputSeries = [];
+ 
+ const offsetIndicator = require(""exampleOffset"");
+ 
+ const calculator = new offsetIndicator.calculator();
+ 
+ for(let i=0; i<inputSeries.length; ++i) {
+   outputSeries.push(calculator.map(inputSeries[i], i, inputSeries, outputSeries))
+ }
+ 
+ // Now outputSeries can go plotting to the screen
+
+
+The application calls the map function with four arguments: the current item, index of the item in the input series, input series, and a series with previously calculated values. As for our Price Offset Indicator, it is enough just to use the input item.
+
+As soon as we put our indicator to the app via Code Explorer, the Charts module will show it in the list of indicators with the name 'EXAMPLEOFFSET'. It will just plot a grey line by default with some offset below the input. Later, we will learn how to customize our indicators with a human-friendlier name.
+
+ON THIS PAGE
+Indicator Tutorial 1"
+https://developer.ninjatrader.com/docs/web/ParameterizedPriceOffset,"GUIDES
+Introduction
+Simple Price Offset
+Parameterized Price Offset
+Exponential Moving Average
+Human Friendlier EMA
+Built-in Tools
+Double EMA
+Plotters
+Signaling Average True Range
+Fourier Moving Average
+Spectrogram
+Graphics
+Alligator
+ScaleBound Values
+Custom Drawing Tools
+Advanced Custom Drawing Tools
+REFERENCE
+Modules
+Parameterized Price Offset
+INDICATOR TUTORIAL 2
+
+In the previous example, we introduced some magic numbers to specify the offset. But it would be more convenient to introduce some flexibility and let us choose the number at the time when we place the indicator on the chart. To do it, we need to extend our module to get the next content:
+
+class offset {
+   map(d) {
+       return d.value() - this.props.offset;
+   }
+}
+ 
+module.exports = {
+   name: ""exampleOffset"",
+   calculator: offset,
+   params: {
+       offset: {
+               type: ""number"",
+               def: 2.0,
+               restrictions: {
+                   step: 0.25,
+                   min: 0.0
+               }
+       }
+   }
+};
+
+
+Now our calculator has this.props object that includes all parameters specified by a user when the indicator was placed on a chart. To help the app and the user to figure out what parameters are expected, we added the params section to the module export. It tells the app that we expect one parameter named offset and it should be edited as number with default value 2.0 and some restrictions on the value.
+
+ON THIS PAGE
+Indicator Tutorial 2"
+https://developer.ninjatrader.com/docs/web/ExponentialMovingAverage,"GUIDES
+Introduction
+Simple Price Offset
+Parameterized Price Offset
+Exponential Moving Average
+Human Friendlier EMA
+Built-in Tools
+Double EMA
+Plotters
+Signaling Average True Range
+Fourier Moving Average
+Spectrogram
+Graphics
+Alligator
+ScaleBound Values
+Custom Drawing Tools
+Advanced Custom Drawing Tools
+REFERENCE
+Modules
+Exponential Moving Average
+INDICATOR TUTORIAL 3
+
+Exponential Moving Average is a little bit more complex indicator: it has to keep in mind its previous calculations.
+
+The app doesn't restrict the calculator class how it can use its fields or functions. As result, the most simple way to keep the state of the previous calculation is by saving it in the object's fields. Like, this.initialSum = this.initialSum + d.value(). Here is our EMA that has a lot in common with our previous indicator:
+
+class ema {
+   init() {
+       this.previousMA = undefined;
+       this.initialSum = 0;
+   }
+ 
+   map(d, index) {
+       let result;
+ 
+       if (index < this.props.period) {
+           this.initialSum += d.value();
+           result = this.initialSum / (index + 1);
+       }
+       else {
+           const multiplier = 2.0 / (this.props.period + 1);
+           result = (d.value() - this.previousMA) * multiplier + this.previousMA;
+       }
+       this.previousMA = result;
+       return result;
+   }
+}
+ 
+module.exports = {
+   name: ""exampleEma"",
+   calculator: ema,
+   params: {
+       period: {
+               type: ""number"",
+               def: 10,
+               restrictions: {
+                   step: 1,
+                   min: 3
+               }
+       }
+   }
+};
+
+
+We added one more function to the calculator class - an implementation of {@linkcode Calculator.init}. The application calls this optional function before the calculation loop. Our EMA uses it to initialize the state's fields.
+
+ON THIS PAGE
+Indicator Tutorial 3"
+https://developer.ninjatrader.com/docs/web/HumanFriendlierEMA,"GUIDES
+Introduction
+Simple Price Offset
+Parameterized Price Offset
+Exponential Moving Average
+Human Friendlier EMA
+Built-in Tools
+Double EMA
+Plotters
+Signaling Average True Range
+Fourier Moving Average
+Spectrogram
+Graphics
+Alligator
+ScaleBound Values
+Custom Drawing Tools
+Advanced Custom Drawing Tools
+REFERENCE
+Modules
+Human Friendlier EMA
+INDICATOR TUTORIAL 4
+
+Now we will improve the appearance of the indicator in the app.
+
+First, let's add a recognizable name in the indicator menu and default line style by extending the module's export with the indicator's definition.
+
+class ema {
+   init() {
+       this.previousMA = undefined;
+       this.initialSum = 0;
+   }
+ 
+   map(d, index) {
+       let result;
+ 
+       if (index < this.props.period) {
+           this.initialSum += d.value();
+           result = this.initialSum / (index + 1);
+       }
+       else {
+           const multiplier = 2.0 / (this.props.period + 1);
+           result = (d.value() - this.previousMA) * multiplier + this.previousMA;
+       }
+       this.previousMA = result;
+       return result;
+   }
+}
+ 
+module.exports = {
+   name: ""exampleEma"",
+   description: ""My EMA"",
+   calculator: ema,
+   params: {
+       period: {
+               type: ""number"",
+               def: 10,
+               restrictions: {
+                   step: 1,
+                   min: 3
+               }
+       }
+   },
+   tags: [""My Indicators"", ""Moving Averages""],
+   schemeStyles: {
+       dark: {
+           _: {
+               color: ""red"",
+           }
+       }
+   }
+};
+
+
+Now the indicator can be found in two sub-menus: My Indicators and Moving Averages under the name My EMA. By default, it will have a red color. The app uses web colors. Other line properties that can be set in default style are lineWidth (in pixels), opacity (in percents), lineStyle (an index of style in the list of line styles in Indicator Editor). schemeStyles can be used to set default styles for dark and light mode of the app. _ field is a placeholder for the plot name: an indicator can have multiple plots and each of them can have default styles. But our current indicator has just one plot without any particular name. As so, we use just _.
+
+ON THIS PAGE
+Indicator Tutorial 4"
+https://developer.ninjatrader.com/docs/web/BuiltinTools,"GUIDES
+Introduction
+Simple Price Offset
+Parameterized Price Offset
+Exponential Moving Average
+Human Friendlier EMA
+Built-in Tools
+Double EMA
+Plotters
+Signaling Average True Range
+Fourier Moving Average
+Spectrogram
+Graphics
+Alligator
+ScaleBound Values
+Custom Drawing Tools
+Advanced Custom Drawing Tools
+REFERENCE
+Modules
+Built-in Tools
+INDICATOR TUTORIAL 5
+
+A major part of the indicator can be reused by other indicators. The application includes tools folder with a set of reusable classes and functions. Indicators can import them via require construction of Javascript.
+
+For example, our EMA can be rewritten as this one:
+
+const predef = require(""./tools/predef"");
+const EMA = require(""./tools/EMA"");
+ 
+class ema {
+   init() {
+       this.emaAlgo = EMA(this.props.period);
+   }
+ 
+   map(d) {
+       return this.emaAlgo(d.value());
+   }
+}
+ 
+module.exports = {
+   name: ""exampleEma"",
+   description: ""My EMA"",
+   calculator: ema,
+   params: {
+       period: predef.paramSpecs.period(10)
+   },
+   tags: [""My Indicators"", predef.tags.MovingAverage],
+   schemeStyles: predef.styles.solidLine(""red"")
+};
+
+
+Source codes of the tools folder are available via the Code Explorer module of the application.
+
+ON THIS PAGE
+Indicator Tutorial 5"
+https://developer.ninjatrader.com/docs/web/DoubleEMA,"GUIDES
+Introduction
+Simple Price Offset
+Parameterized Price Offset
+Exponential Moving Average
+Human Friendlier EMA
+Built-in Tools
+Double EMA
+Plotters
+Signaling Average True Range
+Fourier Moving Average
+Spectrogram
+Graphics
+Alligator
+ScaleBound Values
+Custom Drawing Tools
+Advanced Custom Drawing Tools
+REFERENCE
+Modules
+Double EMA
+INDICATOR TUTORIAL 6
+
+There are several indicators that employ two moving averages with different periods. We'll build some variation of it and will show two EMA side-by-side. Let's call one of them ""fast EMA"" and another ""slow EMA"".
+
+As in the previous indicator, we will apply the ready-to-use EMA algorithm from tools. Twice. And each EMA will have its own parameter and own output value.
+
+To return two values from our {@linkcode Calculator.map} function implementation, we will return an object with two fields instead of just a number as previously. Then, we will define how to plot these values and will refer to their names.
+
+const predef = require(""./tools/predef"");
+const EMA = require(""./tools/EMA"");
+ 
+class doubleEma {
+   init() {
+       this.slowEma = EMA(this.props.slowPeriod);
+       this.fastEma = EMA(this.props.fastPeriod);
+   }
+ 
+   map(d) {
+       const value = d.value();
+       return {
+           slow: this.slowEma(value),
+           fast: this.fastEma(value)
+       };
+   }
+}
+ 
+module.exports = {
+   name: ""doubleEma"",
+   description: ""Double EMA"",
+   calculator: doubleEma,
+   params: {
+       slowPeriod: predef.paramSpecs.period(21),
+       fastPeriod: predef.paramSpecs.period(10)
+   },
+   tags: [""My Indicators""],
+   plots: {
+       fast: { title: ""FastEMA"" },
+       slow: { title: ""SlowEMA"" },
+   },
+   schemeStyles: {
+       dark: {
+           fast: {color: ""red""},
+           slow: {color: ""blue"", lineStyle: 3 }
+       }
+   }
+};
+
+
+Now module's export includes a new field Indicator.plots: it tells the app which fields from the output object should be plotted and shown in the Data Box inside Charts.
+
+This version of Indicator.schemeStyles includes default line properties for both these plots.
+
+ON THIS PAGE
+Indicator Tutorial 6"
+https://developer.ninjatrader.com/docs/web/Plotters,"GUIDES
+Introduction
+Simple Price Offset
+Parameterized Price Offset
+Exponential Moving Average
+Human Friendlier EMA
+Built-in Tools
+Double EMA
+Plotters
+Signaling Average True Range
+Fourier Moving Average
+Spectrogram
+Graphics
+Alligator
+ScaleBound Values
+Custom Drawing Tools
+Advanced Custom Drawing Tools
+REFERENCE
+Modules
+Plotters
+INDICATOR TUTORIAL 7
+
+So far our indicators plotted only lines. But there is a variety of other plotters in Tradovate Trader: dots, columns, specialized plotters that you can find out in some complex built-in indicators.
+
+As an example, we are going to replace the 'slow EMA' line with dots. The plotter will place one dot per each bar.
+
+To achieve it, we need to implement the {@linkcode Indicator.plotter} field in the module's exports:
+
+ 
+...
+ 
+module.exports = {
+   name: ""doubleEma"",
+   description: ""Double EMA"",
+   calculator: doubleEma,
+   params: {
+       slowPeriod: predef.paramSpecs.period(21),
+       fastPeriod: predef.paramSpecs.period(10)
+   },
+   tags: [""My Indicators""],
+   plots: {
+       fast: { title: ""FastEMA"" },
+       slow: { title: ""SlowEMA"" },
+   },
+   plotter: [
+       predef.plotters.dots(""slow""),
+       predef.plotters.singleline(""fast""),
+   ],
+   schemeStyles: {
+       dark: {
+           fast: {color: ""red""},
+           slow: {color: ""lightblue""}
+       }
+   }
+};
+
+
+Moreover, we can implement even our own plotter. Since we have two closely related plots, it would be nice to connect them at each bar. It will look like DNA.
+
+Below we've implemented the dnaLikePlotter function and mentioned it in our list of plotters. We didn't touch old plotters, just added one more.
+
+All that the plotter function does is drawing basic lines from one point to another. The application calls this function with three arguments: canvas, calculatorInstance, and history (see Custom.function).
+
+canvas represents a chart area and has several methods to place drawing to it: to draw a line from one point to another, to draw a complex path with multiple points. The canvas is going to be a rich structure with more functionality to come.
+
+calculatorInstance refers to the instance of our calculator class. The plotter can access its fields if needed. For example, calculatorInstance.props.slowPeriod is available there.
+
+history is an object that stores the results of our calculations.
+
+const predef = require(""./tools/predef"");
+const EMA = require(""./tools/EMA"");
+const p = require(""./tools/plotting"");
+ 
+class doubleEma {
+   init() {
+       this.slowEma = EMA(this.props.slowPeriod);
+       this.fastEma = EMA(this.props.fastPeriod);
+   }
+ 
+   map(d) {
+       const value = d.value();
+       return {
+           slow: this.slowEma(value),
+           fast: this.fastEma(value)
+       };
+   }
+}
+ 
+function dnaLikePlotter(canvas, calculatorInstance, history) {
+   for(let i=0; i<history.data.length; ++i) {
+       const item = history.get(i);
+       if (item.slow !== undefined && item.fast !== undefined) {
+           const x = p.x.get(item);
+           canvas.drawLine(
+               p.offset(x, item.fast),
+               p.offset(x, item.slow),
+               {
+                   color: item.fast > item.slow ? ""green"" : ""red"",
+                   relativeWidth: 0.5,
+                   opacity: 0.5
+               });
+       }
+   }
+}
+ 
+module.exports = {
+   name: ""doubleEma"",
+   description: ""Double EMA"",
+   calculator: doubleEma,
+   params: {
+       slowPeriod: predef.paramSpecs.period(21),
+       fastPeriod: predef.paramSpecs.period(10)
+   },
+   tags: [""My Indicators""],
+   plots: {
+       fast: { title: ""FastEMA"" },
+       slow: { title: ""SlowEMA"" },
+   },
+   plotter: [
+       predef.plotters.dots(""slow""),
+       predef.plotters.singleline(""fast""),
+       predef.plotters.custom(dnaLikePlotter)
+   ],
+   schemeStyles: {
+       dark: {
+           fast: {color: ""red""},
+           slow: {color: ""lightblue""}
+       }
+   }
+};
+
+
+The plotter function above involves the plotting built-in module. The module contains a bunch of helper functions to simplify plotting. In our case, we use plotting.x.get to retrieve the X coordinate of the item.
+
+The function plots each line with red or green color and tells the app to draw them with half opacity and width equals to half-space between bars plotting.x.relativeWidth.
+
+ON THIS PAGE
+Indicator Tutorial 7"
+https://developer.ninjatrader.com/docs/web/SignalingATR,"GUIDES
+Introduction
+Simple Price Offset
+Parameterized Price Offset
+Exponential Moving Average
+Human Friendlier EMA
+Built-in Tools
+Double EMA
+Plotters
+Signaling Average True Range
+Fourier Moving Average
+Spectrogram
+Graphics
+Alligator
+ScaleBound Values
+Custom Drawing Tools
+Advanced Custom Drawing Tools
+REFERENCE
+Modules
+Signaling Average True Range
+INDICATOR TUTORIAL 8
+
+Fancy-looking EMA is not enough for successful trading. We need a fancy-looking Average True Range indicator too.
+
+First, we just copy the built-in ATR indicator with some renaming:
+
+const predef = require(""./tools/predef"");
+const meta = require(""./tools/meta"");
+const MMA = require(""./tools/MMA"");
+const trueRange = require(""./tools/trueRange"");
+ 
+class averageTrueRange {
+   init() {
+       this.movingAverage = MMA(this.props.period);
+   }
+ 
+   map(d, i, history) {
+       return this.movingAverage(trueRange(d, history.prior()));
+   }
+}
+ 
+module.exports = {
+   name: ""exampleATR"",
+   description: ""Average True Range"",
+   calculator: averageTrueRange,
+   params: {
+       period: predef.paramSpecs.period(14)
+   },
+   inputType: meta.InputType.BARS,
+   areaChoice: meta.AreaChoice.NEW,
+   tags: [""My Indicators""],
+   schemeStyles: predef.styles.solidLine(""#ffe270"")
+};
+
+
+The source code is similar to our previous indicators with some additions in the module's export: Indicator.inputType restricts user's choice with OHLC bars here, and Indicator.areaChoice will highlight 'New Area' choice by default when you will place an indicator to the chart. Bars as an input are required to calculate True Range that needs High, Low and Close: all of them will be available in map function via d.high(), d.low() and d.close()
+
+Our goal is to improve the indicator and highlight places where it is larger than some parameterized threshold. Moreover, the threshold parameter will be in tick sizes to make the indicator a product-neutral.
+
+We will highlight the ATR line as well as corresponding candlesticks. For simplicity, highlighting will be with eye-catching tones of red/green colors.
+
+If we need just change the style of dots and columns, we don't need to implement a custom plotter: all we need to do is to compose the style field in the returned object from the map function. Candlestick style is done a similar way.
+
+const predef = require(""./tools/predef"");
+const meta = require(""./tools/meta"");
+const MMA = require(""./tools/MMA"");
+const trueRange = require(""./tools/trueRange"");
+ 
+class averageTrueRange {
+   init() {
+       this.movingAverage = MMA(this.props.period);
+   }
+ 
+   map(d, i, history) {
+       const atr = this.movingAverage(trueRange(d, history.prior()));
+       const tickSize = this.contractInfo.tickSize;
+       const atrInTicks = atr / tickSize;
+       let overrideStyle;
+       if (atrInTicks > this.props.threshold) {
+           overrideStyle = {
+               color: d.open() > d.close() ? ""salmon"" : ""lightgreen""
+           };
+       }
+       return {
+           value: atr,
+           candlestick: overrideStyle,
+           style: {
+               value: overrideStyle
+           }
+       };
+   }
+}
+ 
+module.exports = {
+   name: ""exampleATR"",
+   description: ""Average True Range"",
+   calculator: averageTrueRange,
+   params: {
+       period: predef.paramSpecs.period(14),
+       threshold: predef.paramSpecs.number(10, 1, 0)
+   },
+   inputType: meta.InputType.BARS,
+   areaChoice: meta.AreaChoice.NEW,
+   tags: [""My Indicators""],
+   plotter: predef.plotters.columns(""value""),
+   schemeStyles: predef.styles.solidLine(""#ffe270"")
+};
+
+
+this.contractInfo above is an object with details about the contract of the chart. The app assigns it to the indicator during construction.
+
+ON THIS PAGE
+Indicator Tutorial 8"
+https://developer.ninjatrader.com/docs/web/FourierMovingAverage,"GUIDES
+Introduction
+Simple Price Offset
+Parameterized Price Offset
+Exponential Moving Average
+Human Friendlier EMA
+Built-in Tools
+Double EMA
+Plotters
+Signaling Average True Range
+Fourier Moving Average
+Spectrogram
+Graphics
+Alligator
+ScaleBound Values
+Custom Drawing Tools
+Advanced Custom Drawing Tools
+REFERENCE
+Modules
+Fourier Moving Average
+INDICATOR TUTORIAL 9
+
+Tradovate Trader includes some third-party libraries that can be helpful for indicators.
+
+Lodash is a very popular and high-performance library to work with arrays and objects. All you need to do is to include const lodash = require(""lodash"") in your module.
+
+Another is a library for Fast Fourier Transform. Here is an example of how to apply this library to build a moving average that calculated as FFT of input data, a filter of high frequencies, and inverse FFT.
+
+const predef = require(""./tools/predef"");
+const FFT = require(""fft"");
+ 
+class fourierMA {
+   init() {
+       const period = this.props.period;
+       this.fft = FFT(period);
+       this.signal = new Array(period);
+       this.zero = new Array(period);
+       for(let i=0; i<period; ++i) {
+           this.zero[i] = 0.0;
+       }
+       this.lastIndex = -1;
+   }
+ 
+   map(d, index) {
+       const period = this.props.period;
+       const value = d.value();
+ 
+       if (index < period) {
+           this.signal[period - index - 1] = value;
+       }
+       else {
+           if (this.lastIndex < index) {
+               this.signal.pop();
+               this.signal.unshift(value);
+           }
+           else {
+               this.signal[0] = value;
+           }
+       }
+ 
+       this.lastIndex = index;
+ 
+       if (index >= period) {
+           const re = [].concat(this.signal);
+           const im = [].concat(this.zero);
+           this.fft.fft1d(re, im);
+ 
+           const middle = period / 2 + 1;
+           const startFreq = this.props.filterFreqStart;
+           for(let i=startFreq; i<middle; ++i) {
+               re[i] = im[i] = 0.0;
+               re[period - i] = im[period - i] = 0.0;
+           }
+           this.fft.ifft1d(re, im);
+ 
+           return re[0];
+       }
+   }
+}
+ 
+module.exports = {
+   name: ""fourierMA"",
+   description: ""Fourier MA"",
+   calculator: fourierMA,
+   params: {
+       period: predef.paramSpecs.period(64),
+       filterFreqStart: predef.paramSpecs.period(16),
+   },
+   tags: [""My Indicators""],
+};
+
+
+ON THIS PAGE
+Indicator Tutorial 9"
+https://developer.ninjatrader.com/docs/web/Spectrogram,"GUIDES
+Introduction
+Simple Price Offset
+Parameterized Price Offset
+Exponential Moving Average
+Human Friendlier EMA
+Built-in Tools
+Double EMA
+Plotters
+Signaling Average True Range
+Fourier Moving Average
+Spectrogram
+Graphics
+Alligator
+ScaleBound Values
+Custom Drawing Tools
+Advanced Custom Drawing Tools
+REFERENCE
+Modules
+Spectrogram
+INDICATOR TUTORIAL 10
+
+Our Spectrogram has a lot in common with our previous indicator. Let's move out such pieces to a new helper module:
+
+const FFT = require(""fft"");
+ 
+function initialize(instance) {
+   const period = instance.props.period;
+   instance.fft = FFT(period);
+   instance.signal = new Array(period);
+   instance.zero = new Array(period);
+   for(let i=0; i<period; ++i) {
+       instance.zero[i] = 0.0;
+   }
+   instance.lastIndex = -1;
+}
+ 
+function updateSeries(instance, value, index) {
+   const period = instance.props.period;
+   if (index < period) {
+       instance.signal[period - index - 1] = value;
+   }
+   else {
+       if (instance.lastIndex < index) {
+           instance.signal.pop();
+           instance.signal.unshift(value);
+       }
+       else {
+           instance.signal[0] = value;
+       }
+   }
+ 
+   instance.lastIndex = index;
+ 
+   if (index >= period) {
+       const re = [].concat(instance.signal);
+       const im = [].concat(instance.zero);
+       instance.fft.fft1d(re, im);
+       return { re, im };
+   }
+}
+ 
+module.exports = {
+   initialize,
+   updateSeries,
+   tag: ""Fourier Analysis""
+};
+
+
+Let's save it with the fourierCommon.js name.
+
+Refactored fourierMA will be reduced up to the next version:
+
+const predef = require(""./tools/predef"");
+const FFT = require(""fft"");
+const fourierCommon = require(""./fourierCommon"");
+ 
+class fourierMA {
+   init() {
+       fourierCommon.initialize(this);
+   }
+ 
+   map(d, index) {
+       const period = this.props.period;
+       const value = d.value();
+ 
+       const transform = fourierCommon.updateSeries(this, value, index);
+ 
+       if (transform) {
+           const re = transform.re;
+           const im = transform.im;
+ 
+           const middle = period / 2 + 1;
+           const startFreq = this.props.filterFreqStart;
+           for(let i=startFreq; i<middle; ++i) {
+               re[i] = im[i] = 0.0;
+               re[period - i] = im[period - i] = 0.0;
+           }
+ 
+           this.fft.ifft1d(re, im);
+ 
+           return re[0];
+       }
+   }
+}
+ 
+module.exports = {
+   name: ""fourierMA"",
+   description: ""Fourier MA"",
+   calculator: fourierMA,
+   params: {
+       period: predef.paramSpecs.period(64),
+       filterFreqStart: predef.paramSpecs.period(16),
+   },
+   tags: [fourierCommon.tag],
+};
+
+
+The Spectrogram indicator will use the same approach to calculate Fourier coefficients. Then, we will build a custom plotter that will show these coefficients as 2D map of frequencies and their amplitudes.
+
+const predef = require(""./tools/predef"");
+const meta = require(""./tools/meta"");
+const FFT = require(""fft"");
+const fourierCommon = require(""./fourierCommon"");
+const p = require(""./tools/plotting"");
+ 
+class spectrogram {
+   init() {
+       fourierCommon.initialize(this);
+       this.peakValue = 0;
+   }
+ 
+   map(d, index) {
+       const period = this.props.period;
+       const value = d.value();
+ 
+       const transform = fourierCommon.updateSeries(this, value, index);
+ 
+       if (transform) {
+           const amplitudes = [];
+           const n = period / 2 + 1;
+           for(let i=1; i<n; ++i) {
+               const re = transform.re[i]/period;
+               const im = transform.im[i]/period;
+               const amplitude = 2 * Math.sqrt(re * re + im * im);
+               amplitudes.push(amplitude);
+               this.peakValue = Math.max(this.peakValue, amplitude);
+           }
+           return {
+               amplitudes,
+               lower: 1,
+               upper: period / 2 + 1
+           };
+       }
+       else {
+           return {};
+       }
+   }
+}
+ 
+function hexhex(d) {
+   return (d < 16 ? ""0"" : """") + d.toString(16);
+}
+ 
+function toRgb(r, g, b) {
+   return ""#"" + hexhex(r) + hexhex(g) + hexhex(b) + ""80"";
+}
+ 
+function heatmapPlotter(canvas, instance, history) {
+   const period = instance.props.period;
+   const heatmap = p.createHeatmap(1, period / 2 + 1);
+   for(let i=0; i<history.data.length; ++i) {
+       const item = history.get(i);
+       if (item.amplitudes) {
+           const colors = item.amplitudes.map(
+               (amp) => {
+                   const colorValue = Math.round(255 * amp / instance.peakValue);
+                   return toRgb(colorValue, colorValue, colorValue)
+               });
+           heatmap.addColumn(p.x.get(item), colors);
+       }
+   }
+   canvas.drawHeatmap(heatmap.end());
+}
+ 
+module.exports = {
+   name: ""spectrogram"",
+   description: ""Spectrogram"",
+   calculator: spectrogram,
+   params: {
+       period: predef.paramSpecs.period(64)
+   },
+   tags: [fourierCommon.tag],
+   areaChoice: meta.AreaChoice.NEW,
+   plotter: [
+       predef.plotters.custom(heatmapPlotter)
+   ],
+   scaler: predef.scalers.multiPath([""lower"", ""upper""])
+};
+
+
+Because there are no regular plots and the app can struggle to evaluate min/max values of indicator to properly auto-scale it in the area, we implemented Indicator.scaler field in the module's export. It will tell the app to use two fields from the output for scaling, even if they are not plotted.
+
+The same lower and upper fields are used as domain boundaries for the heatmap object. Each column of the heatmap is a list of colors that divides a space between lower and upper to equal pieces.
+
+Note: vertical axis shows frequency as a divider of the period of the indicator. For example, 1 corresponds to the whole period, 2 - twice faster than indicator's period, etc.
+
+ON THIS PAGE
+Indicator Tutorial 10"
+https://developer.ninjatrader.com/docs/web/Graphics,"GUIDES
+Introduction
+Simple Price Offset
+Parameterized Price Offset
+Exponential Moving Average
+Human Friendlier EMA
+Built-in Tools
+Double EMA
+Plotters
+Signaling Average True Range
+Fourier Moving Average
+Spectrogram
+Graphics
+Alligator
+ScaleBound Values
+Custom Drawing Tools
+Advanced Custom Drawing Tools
+REFERENCE
+Modules
+Graphics
+INDICATOR TUTORIAL 11
+
+Custom Indicators now has a Graphics module. We can leverage this in our own indicators to create more complex graphics. To enable graphics in your indicator, modify the object return value of map.
+
+//...
+    map(d) {
+        return {
+            graphics: {
+                items: [
+                    //GraphicsObjects go here.
+                ]
+            }
+        }
+    }
+//...
+
+
+The items field within graphics tells the renderer what graphics to display. Each item must adhere to the GraphicsObject interface.
+
+Let's imagine we want to note when a substantial gain has occured at an index on the chart. To do so we must track the last known value. Let's write a tool to help us do this:
+
+function MyTracker(magicNumber) {
+    function tracker(value) {
+        return tracker.push(value)
+    }
+    
+    tracker.push = (value) => {
+        let result = value - tracker.state.last >= magicNumber
+        tracker.state.last = value
+        return result
+    }
+    
+    tracker.reset = () => {
+        tracker.state = {
+            last: -1
+        }
+    }
+    
+    tracker.reset()
+    
+    return tracker
+}
+
+
+On push, the tracker tool will compare the difference of incoming value and the last known value against a magicNumber that will be set by UI parameters. The push function will return true if the difference is greater than or equal to the magic number, indicating a 'substantial gain', as defined by the end user. We will use boolean result to determine whether or not to render a graphic at the point of 'substantial gain'.
+
+Now let's build our calculator - the class that will ultimately represent our indicator.
+
+const { op, px, du } = require('./tools/graphics')
+const predef = require('./tools/predef')
+
+class SubstantialGain {
+    init() {
+        this.tracker = MyTracker(this.props.magicNumber)
+    }
+
+    map(d) {
+        const shouldDraw = this.tracker(d.value())
+        return {
+            graphics: shouldDraw && {
+                items: [
+                    {
+                        tag: ""Text"",
+                        key: ""ex"",
+                        point: {
+                            x: op(du(d.index()), '-', px(2)),
+                            y: op(du(d.value()), '-', px(58)),
+                        },
+                        text: ""!"",
+                        style: { fontSize: 18, fontWeight: ""bold"", fill: ""#5c5"" },
+                        textAlignment: ""centerMiddle""
+                    },
+                ]
+            }
+        }
+    }
+}
+
+module.exports = {
+    name: ""substantialGain"",
+    description: ""SubstantialGain"",
+    calculator: SubstantialGain,
+    params: {
+        magicNumber: predef.paramSpecs.number(1.00, 0.25, 0.25)
+    },
+    tags: [""Drawings""],
+}
+
+
+We first must initialize our tracker tool. We do so in the init function of our calculator, leveraging our module's props. In the map function, we use our tracker tool to get a boolean value for the bar currently being drawn. Finally in the return object of our map, we can add our first graphics item. This particular object is a Text object. If we were to select our Substantial Gains indicator and supply it with a (reasonable) magic number, we should see some greenish exclamation points rendered over some of our chart's bars.
+
+That's a great start, but we have substantially more power at our disposal. Let's start by making our graphic a bit more complex. Within our items array, let's add another GraphicsObject.
+
+//...
+{
+    tag: ""Shapes"",
+    key: 'circs',
+    primitives: [
+        {
+            tag: 'Circle',
+            radius: 10,
+            center: {
+                x: op(du(d.index()), '-', px(2)),
+                y: op(du(d.value()), '-', px(60)),
+            },
+        },
+        
+    ],
+    fillStyle: {
+        color: ""#5c5""
+    }
+},
+//...
+
+
+This is another type of GraphicsObject, the ContourShapes type. This object describes one or more Shape objects to apply a border stroke to, as defined by its lineStyle field. Now we should see a circled exclamation point on bars that have had 'substantial gains'. Now that we have more than one logically grouped element, we should consider containing them as a unit. To do so, we can use the Container type. Replace your items code with this single GraphicsObject object.
+
+//...
+{
+    tag: 'Container',
+    key: 'mediumContainer',
+    children: [
+        {
+            tag: ""Text"",
+            key: ""ex"",
+            point: {
+                x: op(du(d.index()), '-', px(2)),
+                y: op(du(d.value()), '-', px(58)),
+            },
+            text: ""!"",
+            style: { fontSize: 18, fontWeight: ""bold"", fill: ""#5c5"" },
+            textAlignment: ""centerMiddle""
+        },
+        {
+            tag: ""ContourShapes"",
+            key: 'circs',
+            primitives: [
+                {
+                    tag: 'Circle',
+                    radius: 10,
+                    center: {
+                        x: op(du(d.index()), '-', px(2)),
+                        y: op(du(d.value()), '-', px(60)),
+                    },
+                },
+                
+            ],
+            lineStyle: {
+                lineWidth: 2,
+                color: ""#5c5""
+            }
+        },
+    ],
+},
+//...
+
+
+The container has one unique field, children, which is an array of GraphicsObjects. You can leverage this grouping to apply transformations that keep these contained objects in relative space. That way you can move the whole container instead of each object. The other benefit of this is that we can leverage VisibilityConditions over whole groups. Here's what we should see when we render this indicator:
+
+To understand our next step, let's do an experiment. First, zoom way out in the X axis - you can do so by scrolling the mouse wheel. Those circled exclamations don't scale down to fit the new bar size, instead they get clumped up and look bad. Now zoom way in on the X axis. Now because we haven't scaled up they look somewhat lacking and small. We can fix all of this by creating a variety of groups to describe each breakpoint and give them a conditions field. These are the VisibilityConditions} for the object being rendered.
+
+VisibilityConditions consist of scalar ranges in the X or Y axis. These are measured in pixels-per-domain-unit. This works out to roughly the pixel distance between bars in the X axis, and the tick-size in pixels of an index for the given contract being calculated. What this allows us to do is render something different based on breakpoints we define. Here's an example:
+
+//...
+{
+    tag: 'Container',
+    key: 'mediumContainer',
+    conditions: { //<== Added this field!
+        scaleRangeX: { min: 10 },
+    },
+    children: [
+        //... Same as defined before
+    ],
+},
+{
+    tag: 'Container',
+    key: 'tinyContainer',
+    conditions: {
+        scaleRangeX: { min: 0, max: 10 },
+    },
+    children: [
+        {
+            tag: 'Dots',
+            key: 'dots',
+            dots: [
+                { 
+                    point: {
+                        x: du(d.index()), 
+                        y: op(du(d.value()), '-', px(48))
+                    }, 
+                    color: {
+                        r: .25, 
+                        g: .8, 
+                        b: .25
+                    } 
+                }
+            ],
+            style: {
+                lineWidth: 6,
+                color: '#5c5'
+            }
+        },
+    ],
+},
+//...
+
+
+Now when the bars are tiny, and have only between 0 and 10 pixels between them, we will render a tiny dot instead of the circled exclamation.
+
+This introduces anotherGraphicsObject as well - the Dots object. It describes one or more WebGL dots to render. At 10 pixels of space per bar or greater we draw our standard circled exclamation. Note that the scaleRangeX, scaleRangeY, and their min and max fields are actually optional. If omitted, we simply won't apply a bound in the ignored direction or on the ignored axis. We can of course apply something extra for large pixel distances as well.
+
+I'd like to display the amount of the 'substantial gain' at high pixel-per-domain-unit distances. We will need to modify our tracker slightly to accomodate this - we currently discard our last value on each push. We will could provide the difference in the two values as part of the return value of our tracker's push function.
+
+//... in tracker, we simply change push a tiny bit
+    tracker.push = (value) => {
+        let number = value - tracker.state.last
+        let result = number >= magicNumber
+        tracker.state.last = value
+        return [result, number]
+    }
+
+//... in SubstantialGains class we change our tracker's expected return to 2 destructured variables
+    map(d) {
+        const [shouldDraw, difference] = this.tracker(d.value());
+        
+        return {
+            graphics: shouldDraw && {
+                items: [
+                    //We only want to add a single extra element - no need for another container
+                    {
+                        conditions: {
+                            scaleRangeX: { min: 30 }
+                        },
+                        tag: ""Text"",
+                        key: ""bigText"",
+                        text: `+ ${difference}`,
+                        point: {
+                            x: op(du(d.index()), '-', px(4)),
+                            y: op(du(d.value()), '-', px(84))
+                        },
+                        style: { fontSize: 20, fontWeight: ""bold"", fill: ""#0bf"" },
+                        textAlignment: ""centerMiddle""
+                    },
+                    //...
+                ]
+            }
+        }
+    }            
+//...
+
+
+Rendering our indicator should yield this result at big pixel-to-domain ratios:
+
+ON THIS PAGE
+Indicator Tutorial 11"
+https://developer.ninjatrader.com/docs/web/Alligator,"GUIDES
+Introduction
+Simple Price Offset
+Parameterized Price Offset
+Exponential Moving Average
+Human Friendlier EMA
+Built-in Tools
+Double EMA
+Plotters
+Signaling Average True Range
+Fourier Moving Average
+Spectrogram
+Graphics
+Alligator
+ScaleBound Values
+Custom Drawing Tools
+Advanced Custom Drawing Tools
+REFERENCE
+Modules
+Alligator
+INDICATOR TUTORIAL 12
+
+The Alligator is a classic indicator based on the idea that markets spend most of their time in a horizontal motion and about 15-30% of the time trending. Different interactions of its three SMA plots are said to help identify a coming trend and predict its direction. Here's the basic definition:
+
+The Jaws are a 13 period SMA shifted into the future by 8 bars.
+The Lips are an 8 period SMA shifted into the future by 5 bars.
+The Teeth are a 5 period SMA shifted into the future by 3 bars.
+
+Using the Indicator's shifts property, and the builtin SMA tool, we can easily accomplish the Alligator. shifts allow us to define bar-offsets on the X axis into the past or future on a plot-by-plot basis.
+
+const predef = require(""./tools/predef"");
+const SMA = require(""./tools/SMA"");
+
+class Alligator {
+    init() {
+        this.jaws = SMA(this.props.jaws)
+        this.lips = SMA(this.props.lips)
+        this.teeth = SMA(this.props.teeth)
+    }
+
+    map(d) {
+        const jaws = this.jaws(d.value())
+        const lips = this.lips(d.value())
+        const teeth = this.teeth(d.value())
+        return {
+            jaws, lips, teeth
+        }
+    }
+}
+
+module.exports = {
+    name: ""Alligator"",
+    description: ""Alligator"",
+    calculator: Alligator,
+    params: {
+        jaws: predef.paramSpecs.period(13),
+        lips: predef.paramSpecs.period(5),
+        teeth: predef.paramSpecs.period(8)
+    },
+    plots: {
+        jaws: { title: 'Jaws' },
+        lips: { title: 'Lips' },
+        teeth: { title: 'Teeth' }
+    },
+    tags: [predef.tags.MovingAverage],
+    schemeStyles: {
+        dark: {
+            jaws: { color: 'blue' },
+            lips: { color: 'green' },
+            teeth: { color: 'red' }
+        }
+    },
+    //we can use shifts to offset our bars. Negative values would be into the past.
+    shifts: {
+        jaws: 8,
+        lips: 5,
+        teeth: 3
+    }
+};
+
+
+ON THIS PAGE
+Indicator Tutorial 12"
+https://developer.ninjatrader.com/docs/web/ScaleBoundValues,"GUIDES
+Introduction
+Simple Price Offset
+Parameterized Price Offset
+Exponential Moving Average
+Human Friendlier EMA
+Built-in Tools
+Double EMA
+Plotters
+Signaling Average True Range
+Fourier Moving Average
+Spectrogram
+Graphics
+Alligator
+ScaleBound Values
+Custom Drawing Tools
+Advanced Custom Drawing Tools
+REFERENCE
+Modules
+ScaleBound Values
+
+When we define or calculate measurements in chart space when using Custom Indicators or Custom Drawing Tools, we need to consider the unit type that we are working with. We use two typical unit types when developing custom Tradovate tools:
+
+px: the px unit is for pixels. When we want to define something with an absolute pixel unit value, we use px.
+du: the du unit stands for domain units. In the X axis, domain units are the index of the bar, while in the Y axis they are the price of the asset.
+
+We provide helper functions to work with the Scale Bound values expected by anything that requires a Point type object. We can import those functions into our Custom Indicator or Custom Drawing file like so:
+
+const { px, du, op, min, max } = require('./tools/graphics')
+//...
+
+
+Let's review each of these functions and their use.
+
+px and du: Simply defines a Scale Bound value in either px or du unit spaces respectively.
+op: allows for operation between px or du Scale Bound values. This allows us to write code like so - const myVal = op(px(16), '-', du(4525)) - this would result in a value equal to 16 pixels above the 4525 price, given that this is used for a y coordinate.
+min: chooses the lesser of a value. Ex. min(px(d.index()*16), du(d.index()) will choose the smaller of 16 pixels times the bar index, or the bar index as a domain unit.
+max: works exactly the same way as min, except it chooses the larger of the given values.
+
+Anytime we need to define a point in chart space, we will need to provide ScaleBound values. Knowing how to use these functions will save you time and effort when it comes to creating custom tools. Some examples of ScaleBound values in the wild are the x and y fields of any Point type object (so anchors in custom drawing tools, or the point field of a Text type DisplayObject).
+
+ON THIS PAGE"
+https://developer.ninjatrader.com/docs/web/DrawingTools,"GUIDES
+Introduction
+Simple Price Offset
+Parameterized Price Offset
+Exponential Moving Average
+Human Friendlier EMA
+Built-in Tools
+Double EMA
+Plotters
+Signaling Average True Range
+Fourier Moving Average
+Spectrogram
+Graphics
+Alligator
+ScaleBound Values
+Custom Drawing Tools
+Advanced Custom Drawing Tools
+REFERENCE
+Modules
+Custom Drawing Tools
+BUILD CUSTOM DRAWING TOOLS
+
+Custom Drawing Tools allow us to easily create and share custom user-defined drawing tools for use in the Trader application. Defining a custom drawing tool is very similar to defining a custom indicator. We need to create an object that obeys the DrawingToolImplementation interface, as well as export an object that obeys the DrawingTool interface. Let's look at each:
+
+const MyLine = {
+    //...DrawingToolImplementation methods go in here.
+}
+
+module.exports = {
+    name: 'ThreePointTool',                         //a unique identifier for the tool
+    description: 'Three Point Tool',                //the UI displayed name of the tool
+    drawing: MyLine,                                //the object that implements DrawingToolImplementation
+    params: {                                       //like indicators, these are user defined parameters
+        maxPeriod: predef.paramSpecs.period(14)
+    },
+    tags: ['My Tools'],                             //a way to group drawing tools in the UI
+    minN: 2,                                        //the minimum number of anchors
+    maxN: 2                                         //the maximum number of anchors
+}
+
+
+We can see from this example how to define a Custom Drawing Tool at the module.exports level - we need at least the name and drawing fields. The most important field is the drawing. This is where we define our DrawingToolImplementation methods. Let's explore those methods now.'
+
+const MyLine = {
+    //initializes the `state` parameter of the Drawing Tool.
+    init() {
+        return {/*any arbitrary state, this doesn't even have to be an object*/}
+    },
+
+    //graphic items to render associated with this Drawing Tool. The parameter object is 
+    //available to all of the DrawingToolImplementation functions.
+    render({anchors, props, state, plots}) {
+        return {
+            items: [ /* we can put DisplayObjects in here */ ]
+        }
+    },
+
+    //we can change our state parameter using update. A common use case would be to perform a big calculation
+    //and store it in state only when necessary to improve performance and decrease resource usage.
+    update({anchors, props, state, plots}) {
+        if(someCondition) {
+            return { newState: { value: 'myNewValue' } }
+        }
+    },
+
+    //holding the SHIFT key over a drawing reveals its tooltip. We can determine how
+    //the tooltips render with the toopltips function
+    tooltips({anchors, props, state, plots}) {
+        return [
+            //DrawingTooltip items go here
+        ]
+    },
+
+    //controls the X and Y coordinate space that is valid for the anchor at the matching position in the array. 
+    //anchors[0] will be allowed to move 10 units in the X axis, anchors[1] will be able to move 5 units in the Y axis.
+    //If there is no X or Y value listed, there will be no restraint placed on the anchor's valid coords.
+    anchorRestraints() {
+        return [
+            {/*zeroth position anchor*/x: 10 },
+            {/*first position anchor*/y: 5 }
+        ]
+    },
+
+    //controls the color of each anchor at the matching position in the array.
+    //anchors beyond the index accounted for in this array will default to the tail color,
+    //in this case 'blue'
+    anchorStyles() {
+        return [
+            {/*zeroth position anchor*/color: 'red' },
+            {/*first position anchor*/color: 'blue' },
+        ]
+    }
+}
+
+
+You can see that each of these functions controls some aspect of the tool. Let's do something simple and draw a line between two points using the render function.
+
+const MyLine = {
+    render({anchors}) {
+        return {
+            items: [
+                {
+                    tag: 'LineSegments',
+                    key: 'line',
+                    lines: [
+                        {
+                            tag: 'Line',
+                            a: anchors[0],
+                            b: anchors[1]
+                        }
+                    ],
+                    lineStyle: {
+                        lineWidth: 2,
+                        color: '#0f0'
+                    }
+                }
+            ]
+        }
+    },
+}
+
+
+Now if we choose 'My Line' from the drawing tools selector, we should be able to draw a line between two points.
+
+This is a very simple line drawing tool. Let's take it a step further and add a tooltip. When viewing a Drawing Tool that you've drawn onto a chart, you may mouse over it holding the SHIFT key to reveal its tooltip. If you don't define tooltip behavior, nothing will happen. Let's make a tooltip that renders some text and a special delta object.
+
+const MyLine = {
+    //...
+    tooltips({anchors}) {
+        //returns an array of DrawingTooltip items
+        return [
+            {
+                coord: anchors[0],      //coord tells the tooltip where to render in chart space. An anchor's point is a typical choice
+                alignment: {            //the alignment tells the tooltip how to align itself 
+                    tag: 'predef',
+                    x: 'left',
+                    y: 'above'         
+                },
+                items: [
+                    {
+                        content: ""My Line"",
+                    },
+                    {
+                        content: {
+                            delta: anchors[1].y.value - anchors[0].y.value
+                        }
+                    }
+                ]
+            }
+        ]
+    }
+    //...
+}
+
+
+When we hold SHIFT over our drawing now, it will display 'My Line' and the tick delta information between the two points anchors[0] and anchors[1]. Try moving it around to see how it changes.
+
+ON THIS PAGE
+Build Custom Drawing Tools"
+https://developer.ninjatrader.com/docs/web/AdvancedCustomDrawingTools,"GUIDES
+Introduction
+Simple Price Offset
+Parameterized Price Offset
+Exponential Moving Average
+Human Friendlier EMA
+Built-in Tools
+Double EMA
+Plotters
+Signaling Average True Range
+Fourier Moving Average
+Spectrogram
+Graphics
+Alligator
+ScaleBound Values
+Custom Drawing Tools
+Advanced Custom Drawing Tools
+REFERENCE
+Modules
+Advanced Custom Drawing Tools
+CREATING A TREND-LINE TOOL
+
+Because we can do whatever we want with JavaScript, we have a huge amount of freedom when developing our own custom drawing tools. This allows us to use advanced math, place graphics arbitrarily, and even add tooltips that contain custom calculations. In this article, I'll demonstrate what we can accomplish with the Custom Drawing module by walking through the creation of a simple Trend-Line drawing tool.
+
+Let's begin by building a template for our drawing tool:
+
+const predef = require(""./tools/predef"")
+const { px, du, op } = require(""./tools/graphics"")
+
+const Trender = {
+
+    render() {},
+
+    tooltips() {},
+
+    anchorRestraints() {},
+
+    anchorStyles() {
+        return [
+            { color: props.lower },
+            { color: props.lower },
+            { color: props.upper }
+        ]
+    }
+}
+
+module.exports = {
+    name: ""Trender"",
+    description: ""Trender"",
+    drawing: Trender,
+    params: {
+        upper: predef.paramSpecs.color('#2d2'),
+        middle: predef.paramSpecs.color('#999'),
+        lower: predef.paramSpecs.color('#d22')
+    },
+    maxN: 3
+}
+
+
+First, notice we've brought a few methods and objects into scope with require. We will need We can define the our drawing tool as a simple object. The Trender object contains the drawing implementation methods that we will need to utilize. We can then use that object as our drawing field in the module.exports portion of the file. Some other notable portions of the module.exports object include the params field, our user defined parameters, and maxN which lets us define how many anchors our tool can have. In this case we want three anchors, which I'll explain as we go on. We can begin filling out our drawing implementation methods at this point. For now, let's focus on the render method. We will start by rendering a simple line:
+
+const Trender = {
+    //...
+
+    render({anchors, props}) {
+        return {
+            items: [
+                {
+                    tag: 'LineSegments',
+                    key: 'lower',
+                    lines: [
+                        {
+                            tag: 'Line',
+                            a: anchors[0],
+                            b: anchors[1]
+                        }
+                    ],
+                    lineStyle: {
+                        width: 2,
+                        color: props.lower
+                    }
+                },
+            ]
+        }
+    }
+
+    //...
+}
+
+
+If we try this, it should produce a line from the first anchor to the second anchor in the props.lower color (which defaults to reddish). But what we really want are three lines - an upper line, a lower line, and a midpoint line. We can use the third anchor to determine the height of our trend channel. Let's add a top line based on the third anchor:
+
+const Trender = {
+    //...
+
+    render({anchors, props}) {
+        //represents the height of the channel, or zero before anchors[2] exists
+        const upperDiff = anchors[2]
+            ? anchors[2].y.value - anchors[0].y.value
+            : 0
+
+        return {
+            items: [
+                //...
+                {
+                    tag: 'LineSegments',
+                    key: 'upper',
+                    lines: [
+                        {
+                            tag: 'Line',
+                            a: anchors[2] 
+                                ? {
+                                    x: anchors[0].x,
+                                    y: du(anchors[0].y.value + upperDiff) 
+                                }
+                                : anchors[0],
+                            b: anchors[2] 
+                                ? {
+                                    x: anchors[1].x,
+                                    y: du(anchors[1].y.value + upperDiff)
+                                }
+                                : anchors[0]
+                        }
+                    ],
+                    lineStyle: {
+                        width: 2,
+                        color: props.upper
+                    }
+                }
+            ]
+        }
+    }
+
+    //...
+}
+
+
+Now we're getting somewhere. Notice that we've used ternary expressions to determine the a and b points for the line drawings. This is because trying to read the x or y fields of an anchor when it is null will produce an error and mess up how the drawing renders, and it allows us to default to the zeroth anchor before anchors[1] or anchors[2] exist. You'll notice this pattern of defaulting to a known existing value often. But we still want to have a midpoint line as well. We can use the same upperDiff again, divided in half, to find the midpoint line of our channel:
+
+const Trender = {
+    //...
+
+    render({anchors, props}) {
+        return {
+            items: [
+                //...
+                {
+                    tag: 'LineSegments',
+                    key: 'middle',
+                    lines: [
+                        {
+                            tag: 'Line',                            
+                            a: anchors[2] 
+                                ? {
+                                    x: anchors[0].x,
+                                    y: du(anchors[0].y.value + upperDiff/2) 
+                                }
+                                : anchors[0],
+                            b: anchors[2] 
+                                ? {
+                                    x: anchors[1].x,
+                                    y: du(anchors[1].y.value + upperDiff/2)
+                                }
+                                : anchors[0]
+                        }
+                    ],
+                    lineStyle: {
+                        width: 2,
+                        color: props.middle,
+                        lineStyle: 3
+                    },
+                }
+            ]
+        }
+    }
+
+    //...
+}
+
+
+Our drawing is basically complete. You should have something that looks like this:
+But when you hold SHIFT over this drawing, we get no information. That's because we haven't drawn any tooltips yet. Luckily, drawing tooltips is just as easy as defining a render function. Let's draw a tooltip for the price-point at anchors[0].
+
+const Trender = {
+    //...
+
+    tooltips({anchors}) {
+
+        return [
+            {
+                coord: anchors[0],
+                alignment: {
+                    tag: 'predef',
+                    x: 'center',
+                    y: 'below'
+                },
+                items: [
+                    {
+                        key: 'a0',
+                        content: anchors[0].y.value
+                    }
+                ]
+            },
+        ]
+    },
+
+    //...
+}
+
+
+We should add a tooltip for the prices at each of the corners of our tool. Let's write another tooltip for anchors[1] that includes both the price-point, and the tick-delta between anchors[0] and anchors[1]. To get the tick delta, we'll need to track some differences between points that we have defined and their absolute values as well.
+
+const Trender = {
+    //...
+
+    tooltips({anchors, props}) {
+        //difference between anchors 0 and 1, and the absolute value of that difference
+        const deltaARaw = anchors[1] ? anchors[0].y.value - anchors[1].y.value : 0,
+              deltaA    = Math.abs(deltaARaw)
+
+        return [
+            //...
+            {
+                coord: anchors[1] || anchors[0],
+                alignment: {
+                    tag: 'predef',
+                    x: 'right',
+                    y: 'below'
+                },
+                items: [
+                    //price-point
+                    {
+                        key: 'a1',
+                        content: anchors[1] ? anchors[1].y.value : 0
+                    },
+                    //tick delta
+                    {
+                        title: 
+                            deltaARaw < 0 ? 'min. A to B Long: '
+                        :   deltaARaw > 0 ? 'max. A to B Short: '
+                        :                   ' - ',
+                        key: 'lowerMin',
+                        content: { delta: deltaA }
+                    },
+                ]
+            },
+        ]
+    }
+
+    //...
+}
+
+
+Notice that we have some runtime variance here. Based on whether the deltaARaw value is positive or negative, we will render different text based on what that price point and tick delta represent. In this case it is the point at anchors[1], so the lower right corner. This is either the minimum long value of the trend or the maximum short value of the trend.
+
+In order to implement the midpoint and upper points, we will need a value for the vertical delta. Let's add that to our defined variables and add another tooltip for the midpoint price point and tick delta:
+
+const Trender = {
+    //...
+
+    tooltips({anchors, props}) {
+        const deltaARaw = anchors[1] ? anchors[0].y.value - anchors[1].y.value : 0,
+              deltaBRaw = anchors[2] ? anchors[2].y.value - anchors[0].y.value : 0,
+              deltaA    = Math.abs(deltaARaw),
+              deltaB    = Math.abs(deltaBRaw)
+
+        return [
+            //...
+            {
+                coord: 
+                    anchors[1] 
+                    ? {
+                        x: anchors[1].x,
+                        y: du(anchors[1].y.value + deltaB/2)
+                    }
+                    : anchors[0],
+                alignment: {
+                    tag: 'predef',
+                    x: 'right',
+                    y: 'center'
+                },
+                items: [
+                    {
+                        key: 'a2.5',
+                        content: anchors[1] ? anchors[1].y.value + deltaB/2 : 0
+                    },
+                    {
+                        title: 
+                            deltaARaw < 0 ? 'avg. A to B Long: ~'
+                        :   deltaARaw > 0 ? 'avg. A to B Short: ~'
+                        :                   ' - ',
+                        key: 'mid',
+                        content: 
+                            deltaARaw > 0 ? { delta: deltaA - deltaB/2 }
+                        :   deltaARaw < 0 ? { delta: deltaA + deltaB/2 }
+                        :                   { delta: 0 }
+                    },
+                ]
+            },
+        ]
+    }
+}
+
+
+We have to be a little creative about the coord field for the midpoint. I've used the du graphics helper function (which we required at the top of the file) to create the y coordinate. This is because all of the values we use must be ScaleBound values. These are simple objects which have both a unit field and a value field. We can construct them in a less verbose way by using du.
+
+Note: du stands for Domain Units. There is also the px method which constructs ScaleBound values with the Pixels type unit.
+
+We still need to finish filling out our tooltips. Let's finish them off by adding the top-left and top-right points.
+
+const Trender = {
+    //...
+
+    tooltips({anchors, props}) {
+        const deltaARaw = anchors[1] ? anchors[0].y.value - anchors[1].y.value : 0,
+              deltaBRaw = anchors[2] ? anchors[2].y.value - anchors[0].y.value : 0,
+              deltaA    = Math.abs(deltaARaw),
+              deltaB    = Math.abs(deltaBRaw)
+
+        return [
+            //...
+            //top left
+            {
+                coord: 
+                    anchors[1] 
+                    ? {
+                        x: du(anchors[1].x.value),
+                        y: du(anchors[1].y.value + deltaB)
+                    }
+                    : anchors[0],
+                alignment: {
+                    tag: 'predef',
+                    x: 'right',
+                    y: 'above'
+                },
+                items: [
+                    //price
+                    {
+                        key: 'a1.5',
+                        content: anchors[1] ? anchors[1].y.value + deltaB : 0
+                    },
+                    //delta
+                    {
+                        title: 
+                            deltaARaw < 0 ? 'max. A to B Long: '
+                        :   deltaARaw > 0 ? 'min. A to B Short: '
+                        :                   ' - ',
+                        key: 'lowerMax',
+                        content: 
+                            deltaARaw > 0 ? { delta: deltaA - deltaB }
+                        :   deltaARaw < 0 ? { delta: deltaA + deltaB }
+                        :                   { delta: 0 }
+                    },
+                ]
+            },
+            //top right
+            {
+                coord: anchors[2] ? { x: anchors[0].x, y: anchors[2].y } : anchors[0],
+                alignment: {
+                    tag: 'predef',
+                    x: 'center',
+                    y: 'above'
+                },
+                items: [
+                    {
+                        key: 'a2',
+                        content: anchors[2] ? anchors[2].y.value : 0
+                    }
+                ]
+            }
+        ]
+    }
+}
+
+
+Now when we hold SHIFT over our drawing, we should see some actually useful information. Try it:
+
+ON THIS PAGE
+Creating a Trend-Line Tool"
+https://developer.ninjatrader.com/docs/web/modules,"GUIDES
+Introduction
+Simple Price Offset
+Parameterized Price Offset
+Exponential Moving Average
+Human Friendlier EMA
+Built-in Tools
+Double EMA
+Plotters
+Signaling Average True Range
+Fourier Moving Average
+Spectrogram
+Graphics
+Alligator
+ScaleBound Values
+Custom Drawing Tools
+Advanced Custom Drawing Tools
+REFERENCE
+Modules
+Modules
+
+Reference documentation generated using TypeDoc.
+
+Modules
+
+Shifts
+TimeSeries
+calculator
+canvas
+dlls
+drawing-tool
+graphics/DisplayObject
+graphics/GraphicsResponse
+graphics/Scale
+graphics/Style
+indicator
+params
+plots
+plotter
+scaler
+scheme-styles
+ON THIS PAGE"
